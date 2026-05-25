@@ -218,7 +218,10 @@ class App(ctk.CTk):
         self._stat_session.pack(fill="x", pady=(0, 5))
 
         self._stat_marker = StatCard(stats_col, "MARKER", "")
-        self._stat_marker.pack(fill="x", pady=(0, 0))
+        self._stat_marker.pack(fill="x", pady=(0, 5))
+
+        self._stat_marker_count = StatCard(stats_col, "LICZNIK MARKERÓW", "")
+        self._stat_marker_count.pack(fill="x", pady=(0, 0))
 
     def _build_right(self, parent):
         self._log_panel = LogPanel(parent)
@@ -289,6 +292,11 @@ class App(ctk.CTk):
 
         mk = state.current_marker
         self._stat_marker.set(mk if mk else "—")
+
+        if state.running:
+            self._stat_marker_count.set(state.session_marker_count)
+        else:
+            self._stat_marker_count.set("—")
 
         self.after(1000, self._tick)
 

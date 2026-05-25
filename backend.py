@@ -10,6 +10,14 @@ from typing import Optional
 
 from config import WS_HOST, WS_PORT, LSL_STREAM_NAME, N_CHANNELS, OUT_DIR
 
+# Markery prób (BCI) — REST i inne pomocnicze nie wchodzą do licznika.
+COUNTABLE_MARKERS = frozenset({
+    "LEFT_HAND",
+    "RIGHT_HAND",
+    "BOTH_HANDS",
+    "FEET",
+})
+
 # ─── Kolejki ──────────────────────────────────────────────────────────────────
 
 sample_queue: "queue.Queue" = queue.Queue()
@@ -28,6 +36,7 @@ class SessionState:
     session_id: Optional[str] = None
     current_marker: Optional[str] = None
     current_trial: Optional[int] = None
+    session_marker_count: int = 0
     running: bool = False
     samples_received: int = 0
     bytes_written: int = 0
@@ -180,6 +189,7 @@ async def handle_front(websocket):
                 state.session_id = msg.get("sessionId") or f"local-{int(time.time())}"
                 state.current_marker = None
                 state.current_trial = None
+                state.session_marker_count = 0
                 state.running = True
                 state.start_time = time.time()
                 log("ok", f"SESSION_START → ID: {state.session_id}")
@@ -189,12 +199,15 @@ async def handle_front(websocket):
                 state.current_marker = None if marker in (None, "", "NONE") else marker
                 if "trialIndex" in msg:
                     state.current_trial = msg["trialIndex"]
+                if state.current_marker and state.current_marker.upper() in COUNTABLE_MARKERS:
+                    state.session_marker_count += 1
                 log("info", f"MARKER: {state.current_marker}  trial: {state.current_trial}")
 
             elif mtype in ("SESSION_END", "SESSION_ABORTED"):
                 log("warn", f"Koniec sesji: {mtype}")
                 state.current_marker = None
                 state.session_id = None
+                state.session_marker_count = 0
                 state.running = False
                 state.start_time = None
 
